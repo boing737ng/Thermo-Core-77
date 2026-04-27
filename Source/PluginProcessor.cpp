@@ -217,8 +217,32 @@ void ThermoCore77AudioProcessor::setStateInformation(const void *data, int sizeI
             apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
 }
 
+bool ThermoCore77AudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
+{
+    // Простейшая проверка: поддерживаем моно и стерео
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        return false;
+
+    return true;
+}
+
+bool ThermoCore77AudioProcessor::hasEditor() const
+{
+    return true; // Плагин имеет графический интерфейс
+}
+
+juce::AudioProcessorEditor *ThermoCore77AudioProcessor::createEditor()
+{
+    return new ThermoCore77AudioProcessorEditor(*this);
+}
+
+ThermoCore77AudioProcessor::~ThermoCore77AudioProcessor()
+{
+}
+
 // Фабрика процессора
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {
     return new ThermoCore77AudioProcessor();
 }
+
