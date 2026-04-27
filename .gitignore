@@ -1,0 +1,36 @@
+# Игнорируем все результаты сборки Projucer
+Builds/
+
+# Игнорируем автоматически сгенерированный код библиотек 
+# (Projucer восстановит его сам при открытии .jucer файла)
+JuceLibraryCode/
+
+# Файлы настроек Visual Studio
+*.sln
+*.vcxproj
+*.filters
+*.user
+.vs/
+*.sdf
+*.opensdf
+*.suo
+
+# Файлы настроек Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+
+# Файлы macOS
+.DS_Store
+
+# Временные файлы компиляции
+*.obj
+*.o
+*.lib
+*.a
+*.pdb
+*.exp
+*.exe
+*.vst3
+*.component
+*.app
