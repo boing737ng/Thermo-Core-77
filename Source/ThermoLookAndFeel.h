@@ -41,7 +41,7 @@ public:
         // Текст значения в стиле ГОСТ снизу
         g.setColour(juce::Colours::orange.withAlpha(0.7f));
         g.setFont(12.0f);
-        g.drawText(slider.getDisplayLabel(), x, y + height - 10, width, 10, juce::Justification::centred);
+        g.drawText(slider.getName(), x, y + height - 10, width, 10, juce::Justification::centred);
     }
 
     void drawButtonBackground(juce::Graphics &g, juce::Button &button, const juce::Colour &backgroundColour,

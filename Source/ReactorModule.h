@@ -106,7 +106,7 @@ public:
                 float x = channelData[s];
 
                 // Модальный резонанс ядра (акустика активной зоны)
-                coreFilters[ch]->setCoefficients(juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, cutOff, 0.707f + params.modalResonance));
+                coreFilters[ch]->coefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, cutOff, 0.707f + params.modalResonance);
                 x = coreFilters[ch]->processSample(x);
 
                 // Рекурсивный фидбек, зависящий от реактивности

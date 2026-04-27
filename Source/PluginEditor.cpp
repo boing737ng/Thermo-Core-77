@@ -73,7 +73,7 @@ ThermoCore77AudioProcessorEditor::ThermoCore77AudioProcessorEditor(ThermoCore77A
 
 void ThermoCore77AudioProcessorEditor::addSlider(juce::String paramID, juce::String labelText, int panelIndex)
 {
-    auto s = std::make_unique<juce::Slider>(juce::Slider::RotaryVerticalDragStyle, juce::Slider::NoTextBox);
+    auto s = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox);
     addAndMakeVisible(*s);
     sliderAtts.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, paramID, *s));
 

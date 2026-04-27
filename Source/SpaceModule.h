@@ -64,7 +64,7 @@ public:
                 // 1. Гравитационное линзирование (фазовый сдвиг)
                 // Масса линзы меняет коэффициенты фильтра, искривляя АЧХ
                 float apFreq = juce::jlimit(10.0f, 20000.0f, 1000.0f + params.lensMass * 500.0f);
-                allPassFilter.setCoefficients(juce::dsp::IIR::Coefficients<float>::makeAllPass(sampleRate, apFreq));
+                allPassFilter.coefficients = juce::dsp::IIR::Coefficients<float>::makeAllPass(sampleRate, apFreq);
                 x = allPassFilter.processSample(x);
 
                 // 2. Орбитальная задержка с резонансом Кеплера

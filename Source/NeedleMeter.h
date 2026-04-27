@@ -52,7 +52,7 @@ public:
 
         g.setColour(juce::Colours::black);
         g.setFont(14.0f);
-        g.drawText(juce::String::fromUTF8(labelName.toRawUTF8()), getLocalBounds(), juce::Justification::bottomCentred);
+        g.drawText(juce::String::fromUTF8(labelName.toRawUTF8()), getLocalBounds(), juce::Justification::centredBottom);
     }
 
 private:

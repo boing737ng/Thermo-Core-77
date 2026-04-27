@@ -89,8 +89,8 @@ void ThermoCore77AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 {
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
-    spec.maximumBlockSize = uint32(samplesPerBlock);
-    spec.numChannels = uint32(getTotalNumOutputChannels());
+    spec.maximumBlockSize = juce::uint32(samplesPerBlock);
+    spec.numChannels = juce::uint32(getTotalNumOutputChannels());
 
     for (auto &module : modules)
         module->prepare(spec);
