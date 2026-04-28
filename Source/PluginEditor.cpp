@@ -2,128 +2,99 @@
 #include "PluginEditor.h"
 
 // ==============================================================================
-// КОНСТРУКТОР
-// ==============================================================================
 TriadaFireAudioProcessorEditor::TriadaFireAudioProcessorEditor(TriadaFireAudioProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p)
 {
     setLookAndFeel(&lookAndFeel);
 
-    // --- Инициализация и настройка компонентов ---
+    auto addSlider = [this](juce::Slider &s, juce::String paramID, juce::String labelText)
+    {
+        s.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+        s.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 15);
+        addAndMakeVisible(s);
+        sliderAttachments.push_back(std::make_unique<SliderAttachment>(processorRef.apvts, paramID, s));
 
-    // Модуль 1: Лампа
-    for (auto *slider : {&tubeHeaterSlider, &tubeAnodeSlider, &tubeBiasSlider, &tubeMicResSlider, &tubeDriftSlider})
-    {
-        slider->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider->setTextBoxStyle(juce::Slider::TextBoxBelow, true, 80, 20);
-        addAndMakeVisible(slider);
-    }
-    for (auto *combo : {&tubePreampChoice, &tubePowerChoice, &tubeCoreChoice})
-    {
-        combo->setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(combo);
-    }
-
-    tubeHeaterLabel.setText(juce::String::fromUTF8("НАКАЛ"), juce::dontSendNotification);
-    tubeAnodeLabel.setText(juce::String::fromUTF8("АНОД"), juce::dontSendNotification);
-    tubeBiasLabel.setText(juce::String::fromUTF8("СМЕЩЕНИЕ"), juce::dontSendNotification);
-    tubeMicResLabel.setText(juce::String::fromUTF8("РЕЗОНАНС"), juce::dontSendNotification);
-    tubeDriftLabel.setText(juce::String::fromUTF8("ДРЕЙФ"), juce::dontSendNotification);
-    for (auto *label : {&tubeHeaterLabel, &tubeAnodeLabel, &tubeBiasLabel, &tubeMicResLabel, &tubeDriftLabel})
-    {
+        juce::Label *label = new juce::Label(paramID + "_label", labelText);
         label->setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
-    }
+        allLabels.push_back(label);
+    };
 
-    // Модуль 2: Пила
-    for (auto *slider : {&sawRpmSlider, &sawThrottleSlider, &sawTensionSlider, &sawKickbackSlider, &sawMufflerSlider})
+    auto addComboBox = [this](juce::ComboBox &cb, juce::String paramID, juce::StringArray items)
     {
-        slider->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider->setTextBoxStyle(juce::Slider::TextBoxBelow, true, 80, 20);
-        addAndMakeVisible(slider);
-    }
-    sawProfileChoice.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(&sawProfileChoice);
+        cb.addItemList(items, 1);
+        cb.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(cb);
+        comboBoxAttachments.push_back(std::make_unique<ComboBoxAttachment>(processorRef.apvts, paramID, cb));
+    };
 
-    sawRpmLabel.setText(juce::String::fromUTF8("ОБОРОТЫ"), juce::dontSendNotification);
-    sawThrottleLabel.setText(juce::String::fromUTF8("ДРОССЕЛЬ"), juce::dontSendNotification);
-    sawTensionLabel.setText(juce::String::fromUTF8("НАТЯЖЕНИЕ"), juce::dontSendNotification);
-    sawKickbackLabel.setText(juce::String::fromUTF8("ОТДАЧА"), juce::dontSendNotification);
-    sawMufflerLabel.setText(juce::String::fromUTF8("ГЛУШИТЕЛЬ"), juce::dontSendNotification);
-    for (auto *label : {&sawRpmLabel, &sawThrottleLabel, &sawTensionLabel, &sawKickbackLabel, &sawMufflerLabel})
+    auto addToggleButton = [this](juce::ToggleButton &tb, juce::String paramID, juce::String buttonText)
     {
-        label->setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(label);
-    }
+        tb.setButtonText(buttonText);
+        addAndMakeVisible(tb);
+        buttonAttachments.push_back(std::make_unique<ButtonAttachment>(processorRef.apvts, paramID, tb));
+    };
 
-    // Модуль 3: Цифра
-    for (auto *slider : {&digiBitsSlider, &digiSrateSlider, &digiGlitchSlider, &digiScratchSlider, &digiCompThreshSlider, &digiCompRatioSlider})
-    {
-        slider->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider->setTextBoxStyle(juce::Slider::TextBoxBelow, true, 80, 20);
-        addAndMakeVisible(slider);
-    }
-    digiBitsLabel.setText(juce::String::fromUTF8("БИТЫ"), juce::dontSendNotification);
-    digiSrateLabel.setText(juce::String::fromUTF8("ДИСКРЕТ."), juce::dontSendNotification);
-    digiGlitchLabel.setText(juce::String::fromUTF8("ГЛИТЧ"), juce::dontSendNotification);
-    digiScratchLabel.setText(juce::String::fromUTF8("СКРЕТЧ"), juce::dontSendNotification);
-    digiCompThreshLabel.setText(juce::String::fromUTF8("ПОРОГ"), juce::dontSendNotification);
-    digiCompRatioLabel.setText(juce::String::fromUTF8("СТЕПЕНЬ"), juce::dontSendNotification);
-    for (auto *label : {&digiBitsLabel, &digiSrateLabel, &digiGlitchLabel, &digiScratchLabel, &digiCompThreshLabel, &digiCompRatioLabel})
-    {
-        label->setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(label);
-    }
+    // --- TUBE ---
+    addSlider(tubeHeaterSlider, "TUBE_HEATER", juce::String::fromUTF8("НАКАЛ"));
+    addSlider(tubeAnodeSlider, "TUBE_ANODE", juce::String::fromUTF8("АНОД"));
+    addSlider(tubeBiasSlider, "TUBE_BIAS", juce::String::fromUTF8("СМЕЩЕНИЕ"));
+    addSlider(tubeLoadResSlider, "TUBE_LOAD_RES", juce::String::fromUTF8("НАГРУЗКА"));
+    addSlider(tubeCapCouplSlider, "TUBE_CAP_COUPL", juce::String::fromUTF8("ЕМКОСТЬ"));
+    addSlider(tubeCathBypSlider, "TUBE_CATH_BYP", juce::String::fromUTF8("БАЙПАС"));
+    addSlider(tubeMicResSlider, "TUBE_MIC_RES", juce::String::fromUTF8("РЕЗОНАНС"));
+    addSlider(tubeDriftSlider, "TUBE_DRIFT", juce::String::fromUTF8("ДРЕЙФ"));
+    addSlider(tubeQuiesCurSlider, "TUBE_QUIES_CUR", juce::String::fromUTF8("ТОК ПОКОЯ"));
+    addSlider(tubeWarmupSlider, "TUBE_WARMUP", juce::String::fromUTF8("ПРОГРЕВ"));
+    addComboBox(tubePreampChoice, "TUBE_PREAMP", {"12AX7", juce::String::fromUTF8("6Н2П"), "12AT7", "EF86"});
+    addComboBox(tubePowerChoice, "TUBE_POWER", {juce::String::fromUTF8("6П14П"), juce::String::fromUTF8("6П45С"), "EL34", "KT88"});
+    addComboBox(tubeCoreChoice, "TUBE_CORE", {juce::String::fromUTF8("Воздух"), juce::String::fromUTF8("Железо"), juce::String::fromUTF8("Пермаллой"), juce::String::fromUTF8("Феррит")});
+    addComboBox(tubeWindingChoice, "TUBE_WINDING", {"1:1", "1:2", "1:4", "1:8"});
+    addComboBox(tubePhaseModeChoice, "TUBE_PHASE_MODE", {"Push-Pull", "Single-Ended"});
+    addToggleButton(tubeExtBiasButton, "TUBE_EXT_BIAS", juce::String::fromUTF8("ВНЕШ. BIAS"));
 
-    // Модуль 4: Мастер
-    for (auto *slider : {&masterDryWetSlider, &masterFeedbackSlider, &masterOutputSlider})
-    {
-        slider->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-        slider->setTextBoxStyle(juce::Slider::TextBoxBelow, true, 80, 20);
-        addAndMakeVisible(slider);
-    }
-    masterEmergencyButton.setButtonText(juce::String::fromUTF8("! АВАРИЯ !"));
-    addAndMakeVisible(&masterEmergencyButton);
+    // --- SAW ---
+    addSlider(sawRpmSlider, "SAW_RPM", juce::String::fromUTF8("RPM ДВС"));
+    addSlider(sawIntakeGapSlider, "SAW_INTAKE_GAP", juce::String::fromUTF8("ВЗ ЗАЗОР"));
+    addSlider(sawExhaustGapSlider, "SAW_EXHAUST_GAP", juce::String::fromUTF8("ВЫХ ЗАЗОР"));
+    addSlider(sawMainJetSlider, "SAW_MAIN_JET", juce::String::fromUTF8("ЖИКЛЕР"));
+    addSlider(sawIgnAdvanceSlider, "SAW_IGN_ADVANCE", juce::String::fromUTF8("ОПЕРЕЖ."));
+    addSlider(sawSparkGapSlider, "SAW_SPARK_GAP", juce::String::fromUTF8("СВЕЧА"));
+    addSlider(sawTensionSlider, "SAW_TENSION", juce::String::fromUTF8("НАТЯЖЕНИЕ"));
+    addSlider(sawKickbackSlider, "SAW_KICKBACK", juce::String::fromUTF8("ОТДАЧА"));
+    addSlider(sawMufflerSlider, "SAW_MUFFLER", juce::String::fromUTF8("ГЛУШИТЕЛЬ"));
+    addSlider(sawPhaseLockSlider, "SAW_PHASE_LOCK", juce::String::fromUTF8("ФАЗА LOCK"));
+    addComboBox(sawThrottleCurveChoice, "SAW_THROTTLE_CURVE", {juce::String::fromUTF8("Лин"), juce::String::fromUTF8("Эксп"), juce::String::fromUTF8("Лог"), juce::String::fromUTF8("S-обр.")});
+    addComboBox(sawEngineTypeChoice, "SAW_ENGINE_TYPE", {"2Т", "4Т"});
+    addComboBox(sawChainPitchChoice, "SAW_CHAIN_PITCH", {"0.325\"", "0.404\"", "0.50\""});
+    addComboBox(sawProfileChoice, "SAW_PROFILE", {juce::String::fromUTF8("Чиппер"), juce::String::fromUTF8("Скребок"), juce::String::fromUTF8("Полудолото")});
+    addComboBox(sawSyncChoice, "SAW_SYNC", {"Free", "Host BPM", "MIDI", "Audio"});
 
-    masterDryWetLabel.setText("DRY/WET", juce::dontSendNotification);
-    masterFeedbackLabel.setText("FEEDBACK", juce::dontSendNotification);
-    masterOutputLabel.setText("OUTPUT", juce::dontSendNotification);
-    for (auto *label : {&masterDryWetLabel, &masterFeedbackLabel, &masterOutputLabel})
-    {
-        label->setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(label);
-    }
+    // --- DIGI ---
+    addSlider(digiBitsSlider, "DIGI_BITS", juce::String::fromUTF8("БИТНОСТЬ"));
+    addSlider(digiSrateSlider, "DIGI_SRATE", juce::String::fromUTF8("SRATE"));
+    addSlider(digiGlitchGridSlider, "DIGI_GLITCH_GRID", juce::String::fromUTF8("ГЛИТЧ СЕТКА"));
+    addSlider(digiGlitchDensSlider, "DIGI_GLITCH_DENS", juce::String::fromUTF8("СКРЕМБЛИНГ"));
+    addSlider(digiScratchSpdSlider, "DIGI_SCRATCH_SPD", juce::String::fromUTF8("ВРАЩЕНИЕ"));
+    addSlider(digiScratchBufSlider, "DIGI_SCRATCH_BUF", juce::String::fromUTF8("БУФЕР СКРЕТЧ"));
+    addSlider(digiCompThreshSlider, "DIGI_COMP_THRESH", juce::String::fromUTF8("ПОРОГ"));
+    addSlider(digiCompRatioSlider, "DIGI_COMP_RATIO", juce::String::fromUTF8("РАТИО"));
+    addSlider(digiCompKneeSlider, "DIGI_COMP_KNEE", juce::String::fromUTF8("КОЛЕНО"));
+    addSlider(digiCompAttackSlider, "DIGI_COMP_ATTACK", juce::String::fromUTF8("АТАКА"));
+    addSlider(digiCompReleaseSlider, "DIGI_COMP_RELEASE", juce::String::fromUTF8("РЕЛИЗ"));
+    addComboBox(digiQuantCurveChoice, "DIGI_QUANT_CURVE", {juce::String::fromUTF8("Лин"), "μ-Law", "A-Law", "Custom"});
+    addComboBox(digiInterpChoice, "DIGI_INTERP", {juce::String::fromUTF8("Ближ"), juce::String::fromUTF8("Лин"), juce::String::fromUTF8("Кубик"), "Sinc", "ZOH"});
+    addComboBox(digiScratchModelChoice, "DIGI_SCRATCH_MODEL", {juce::String::fromUTF8("Винил"), juce::String::fromUTF8("Кассет"), juce::String::fromUTF8("Цифра")});
+    addToggleButton(digiSidechainButton, "DIGI_SIDECHAIN", juce::String::fromUTF8("САЙДЧЕЙН"));
 
-    // --- Привязка компонентов к параметрам (Attachments) ---
-    tubeHeaterAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "TUBE_HEATER", tubeHeaterSlider);
-    tubeAnodeAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "TUBE_ANODE", tubeAnodeSlider);
-    tubeBiasAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "TUBE_BIAS", tubeBiasSlider);
-    tubeMicResAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "TUBE_MIC_RES", tubeMicResSlider);
-    tubeDriftAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "TUBE_DRIFT", tubeDriftSlider);
-    tubePreampAttach = std::make_unique<ComboBoxAttachment>(processorRef.apvts, "TUBE_PREAMP", tubePreampChoice);
-    tubePowerAttach = std::make_unique<ComboBoxAttachment>(processorRef.apvts, "TUBE_POWER", tubePowerChoice);
-    tubeCoreAttach = std::make_unique<ComboBoxAttachment>(processorRef.apvts, "TUBE_CORE", tubeCoreChoice);
+    // --- MASTER ---
+    addSlider(masterDryWetSlider, "MASTER_DRYWET", juce::String::fromUTF8("MIX"));
+    addSlider(masterFeedbackSlider, "MASTER_FEEDBACK", juce::String::fromUTF8("FEEDBACK"));
+    addSlider(masterOutputSlider, "MASTER_OUTPUT", juce::String::fromUTF8("OUTPUT"));
+    addToggleButton(masterEmergencyButton, "MASTER_EMERGENCY", juce::String::fromUTF8("⚠ АВАРИЯ"));
+    addToggleButton(globalBypassButton, "GLOBAL_BYPASS", juce::String::fromUTF8("BYPASS"));
 
-    sawRpmAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "SAW_RPM", sawRpmSlider);
-    sawThrottleAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "SAW_THROTTLE", sawThrottleSlider);
-    sawTensionAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "SAW_TENSION", sawTensionSlider);
-    sawKickbackAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "SAW_KICKBACK", sawKickbackSlider);
-    sawMufflerAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "SAW_MUFFLER", sawMufflerSlider);
-    sawProfileAttach = std::make_unique<ComboBoxAttachment>(processorRef.apvts, "SAW_PROFILE", sawProfileChoice);
-
-    digiBitsAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_BITS", digiBitsSlider);
-    digiSrateAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_SRATE", digiSrateSlider);
-    digiGlitchAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_GLITCH_DENS", digiGlitchSlider);
-    digiScratchAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_SCRATCH_SPD", digiScratchSlider);
-    digiCompThreshAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_COMP_THRESH", digiCompThreshSlider);
-    digiCompRatioAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "DIGI_COMP_RATIO", digiCompRatioSlider);
-
-    masterDryWetAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "MASTER_DRYWET", masterDryWetSlider);
-    masterFeedbackAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "MASTER_FEEDBACK", masterFeedbackSlider);
-    masterOutputAttach = std::make_unique<SliderAttachment>(processorRef.apvts, "MASTER_OUTPUT", masterOutputSlider);
-    masterEmergencyAttach = std::make_unique<ButtonAttachment>(processorRef.apvts, "MASTER_EMERGENCY", masterEmergencyButton);
-
-    setSize(1000, 600); // Размер окна плагина
+    setSize(1350, 750);
     startTimerHz(30);
 }
 
@@ -131,161 +102,114 @@ TriadaFireAudioProcessorEditor::~TriadaFireAudioProcessorEditor()
 {
     stopTimer();
     setLookAndFeel(nullptr);
+    for (auto *label : allLabels)
+        delete label;
+    allLabels.clear();
 }
 
-// ==============================================================================
-// ОТРИСОВКА (PAINT)
-// ==============================================================================
 void TriadaFireAudioProcessorEditor::paint(juce::Graphics &g)
 {
-    // Фон
     g.fillAll(juce::Colour::fromString("#0B1A0F"));
-
-    auto bounds = getLocalBounds().reduced(10);
+    auto bounds = getLocalBounds().reduced(5);
     g.setColour(juce::Colour::fromString("#CCCCCC").withAlpha(0.3f));
-    g.drawRect(bounds, 1.f);
+    g.drawRect(bounds, 1.0f);
 
-    // Разделители и заголовки модулей
-    auto sectionWidth = getWidth() / 4;
-    g.setFont(juce::Font(24.0f, juce::Font::bold));
+    int sectionWidth = getWidth() / 4;
+
+    // Исправление предупреждения C4996: Использование juce::FontOptions
+    g.setFont(juce::FontOptions(24.0f).withName("Consolas").withStyle("Bold"));
 
     juce::String titles[] = {
-        juce::String::fromUTF8("🔥 ЛАМПА"),
-        juce::String::fromUTF8("🪚 ПИЛА"),
-        juce::String::fromUTF8("💾 ЦИФРА"),
-        juce::String::fromUTF8("🌐 MASTER")};
+        juce::String::fromUTF8("🔥 ЛАМПА"), juce::String::fromUTF8("🪚 ПИЛА"),
+        juce::String::fromUTF8("💾 ЦИФРА"), juce::String::fromUTF8("🌐 МАСТЕР")};
 
     for (int i = 0; i < 4; ++i)
     {
-        auto sectionBounds = juce::Rectangle<int>(i * sectionWidth, 0, sectionWidth, getHeight());
         g.setColour(juce::Colour::fromString("#CCCCCC"));
-        g.drawText(titles[i], sectionBounds.reduced(10).withHeight(40), juce::Justification::centredTop);
-
+        g.drawText(titles[i], i * sectionWidth, 10, sectionWidth, 30, juce::Justification::centred);
         if (i > 0)
         {
-            g.setColour(juce::Colour::fromString("#CCCCCC").withAlpha(0.3f));
-            g.drawVerticalLine(i * sectionWidth, 5.f, getHeight() - 5.f);
+            g.setColour(juce::Colour::fromString("#CCCCCC").withAlpha(0.2f));
+            g.drawVerticalLine(i * sectionWidth, 5.0f, static_cast<float>(getHeight() - 5));
         }
     }
 }
 
-// ==============================================================================
-// РАСПОЛОЖЕНИЕ ЭЛЕМЕНТОВ (RESIZED)
-// ==============================================================================
 void TriadaFireAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds();
-    bounds.removeFromTop(50); // Отступ для заголовка
+    auto area = getLocalBounds().reduced(10);
+    area.removeFromTop(45);
 
-    auto sectionWidth = getWidth() / 4;
-    auto itemHeight = 100;
-    auto labelHeight = 20;
-    auto comboBoxHeight = 25;
+    int sectionWidth = area.getWidth() / 4;
+    int knobSize = 85;
+    int labelHeight = 15;
+    int comboHeight = 22;
+    int spacingY = 8;
 
-    // --- Секция 1: ЛАМПА ---
-    auto lampSection = bounds.removeFromLeft(sectionWidth).reduced(10);
+    // Хелпер-лямбда для авто-размещения в сетку 2x2
+    auto placeKnob = [&](juce::Slider &s, int index, juce::Label *l, int xOff, int yOff, int colW)
+    {
+        int row = index / 2;
+        int col = index % 2;
+        int kx = xOff + col * colW;
+        int ky = yOff + row * (knobSize + labelHeight + spacingY);
+        l->setBounds(kx, ky, colW, labelHeight);
+        s.setBounds(kx, ky + labelHeight, colW, knobSize);
+    };
 
-    auto topRow = lampSection.removeFromTop(comboBoxHeight * 3 + 15);
-    tubePreampChoice.setBounds(topRow.removeFromTop(comboBoxHeight).reduced(5, 0));
-    tubePowerChoice.setBounds(topRow.removeFromTop(comboBoxHeight).reduced(5, 0));
-    tubeCoreChoice.setBounds(topRow.removeFromTop(comboBoxHeight).reduced(5, 0));
+    // --- TUBE ---
+    juce::Rectangle<int> sT = area.removeFromLeft(sectionWidth).reduced(5);
+    int currY = sT.getY();
+    std::vector<juce::ComboBox *> tbCombos = {&tubePreampChoice, &tubePowerChoice, &tubeCoreChoice, &tubeWindingChoice, &tubePhaseModeChoice};
+    for (auto *cb : tbCombos)
+    {
+        cb->setBounds(sT.getX(), currY, sT.getWidth(), comboHeight);
+        currY += comboHeight + spacingY;
+    }
 
-    auto knobArea = lampSection;
-    auto knobWidth = knobArea.getWidth() / 2;
+    std::vector<juce::Slider *> tbSld = {&tubeHeaterSlider, &tubeAnodeSlider, &tubeBiasSlider, &tubeLoadResSlider, &tubeCapCouplSlider, &tubeCathBypSlider, &tubeMicResSlider, &tubeDriftSlider, &tubeQuiesCurSlider, &tubeWarmupSlider};
+    for (size_t i = 0; i < tbSld.size(); ++i)
+        placeKnob(*tbSld[i], static_cast<int>(i), allLabels[i], sT.getX(), currY + spacingY, sT.getWidth() / 2);
+    tubeExtBiasButton.setBounds(sT.getX(), sT.getBottom() - 30, sT.getWidth(), 30);
 
-    tubeHeaterLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    tubeHeaterSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
+    // --- SAW ---
+    juce::Rectangle<int> sS = area.removeFromLeft(sectionWidth).reduced(5);
+    currY = sS.getY();
+    std::vector<juce::ComboBox *> swCombos = {&sawThrottleCurveChoice, &sawEngineTypeChoice, &sawChainPitchChoice, &sawProfileChoice, &sawSyncChoice};
+    for (auto *cb : swCombos)
+    {
+        cb->setBounds(sS.getX(), currY, sS.getWidth(), comboHeight);
+        currY += comboHeight + spacingY;
+    }
 
-    tubeAnodeLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    tubeAnodeSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
+    std::vector<juce::Slider *> swSld = {&sawRpmSlider, &sawIntakeGapSlider, &sawExhaustGapSlider, &sawMainJetSlider, &sawIgnAdvanceSlider, &sawSparkGapSlider, &sawTensionSlider, &sawKickbackSlider, &sawMufflerSlider, &sawPhaseLockSlider};
+    for (size_t i = 0; i < swSld.size(); ++i)
+        placeKnob(*swSld[i], static_cast<int>(i), allLabels[10 + i], sS.getX(), currY + spacingY, sS.getWidth() / 2);
 
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
+    // --- DIGI ---
+    juce::Rectangle<int> sD = area.removeFromLeft(sectionWidth).reduced(5);
+    currY = sD.getY();
+    std::vector<juce::ComboBox *> dgCombos = {&digiQuantCurveChoice, &digiInterpChoice, &digiScratchModelChoice};
+    for (auto *cb : dgCombos)
+    {
+        cb->setBounds(sD.getX(), currY, sD.getWidth(), comboHeight);
+        currY += comboHeight + spacingY;
+    }
 
-    tubeBiasLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    tubeBiasSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
+    std::vector<juce::Slider *> dgSld = {&digiBitsSlider, &digiSrateSlider, &digiGlitchGridSlider, &digiGlitchDensSlider, &digiScratchSpdSlider, &digiScratchBufSlider, &digiCompThreshSlider, &digiCompRatioSlider, &digiCompKneeSlider, &digiCompAttackSlider, &digiCompReleaseSlider};
+    for (size_t i = 0; i < dgSld.size(); ++i)
+        placeKnob(*dgSld[i], static_cast<int>(i), allLabels[20 + i], sD.getX(), currY + spacingY, sD.getWidth() / 2);
+    digiSidechainButton.setBounds(sD.getX() + sD.getWidth() / 2, sD.getY() + currY + spacingY + 5 * (knobSize + labelHeight + spacingY), sD.getWidth() / 2, 30);
 
-    tubeMicResLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    tubeMicResSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
+    // --- MASTER ---
+    juce::Rectangle<int> sM = area.removeFromLeft(sectionWidth).reduced(5);
+    currY = sM.getY();
+    std::vector<juce::Slider *> mstSld = {&masterDryWetSlider, &masterFeedbackSlider, &masterOutputSlider};
+    for (size_t i = 0; i < mstSld.size(); ++i)
+        placeKnob(*mstSld[i], static_cast<int>(i), allLabels[31 + i], sM.getX(), currY + spacingY, sM.getWidth() / 2);
 
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    tubeDriftLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    tubeDriftSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    // --- Секция 2: ПИЛА ---
-    auto sawSection = bounds.removeFromLeft(sectionWidth).reduced(10);
-    sawProfileChoice.setBounds(sawSection.removeFromTop(comboBoxHeight).reduced(5, 0));
-
-    knobArea = sawSection;
-    knobWidth = knobArea.getWidth() / 2;
-
-    sawRpmLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    sawRpmSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    sawThrottleLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    sawThrottleSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    sawTensionLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    sawTensionSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    sawKickbackLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    sawKickbackSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    sawMufflerLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    sawMufflerSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    // --- Секция 3: ЦИФРА ---
-    auto digiSection = bounds.removeFromLeft(sectionWidth).reduced(10);
-    knobArea = digiSection;
-
-    digiBitsLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    digiBitsSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    digiSrateLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    digiSrateSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    digiGlitchLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    digiGlitchSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    digiScratchLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    digiScratchSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    digiCompThreshLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    digiCompThreshSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    digiCompRatioLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    digiCompRatioSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    // --- Секция 4: MASTER ---
-    auto masterSection = bounds.removeFromLeft(sectionWidth).reduced(10);
-    knobArea = masterSection;
-
-    masterDryWetLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    masterDryWetSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    masterFeedbackLabel.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(labelHeight));
-    masterFeedbackSlider.setBounds(knobArea.withLeft(knobArea.getX() + knobWidth).withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    knobArea.removeFromTop(itemHeight + labelHeight + 10);
-
-    masterOutputLabel.setBounds(knobArea.withWidth(knobWidth).withHeight(labelHeight));
-    masterOutputSlider.setBounds(knobArea.withWidth(knobWidth).withHeight(itemHeight).withY(knobArea.getY() + labelHeight));
-
-    masterEmergencyButton.setBounds(masterSection.removeFromBottom(50).reduced(10));
+    masterEmergencyButton.setBounds(sM.getX(), sM.getBottom() - 80, sM.getWidth(), 30);
+    globalBypassButton.setBounds(sM.getX(), sM.getBottom() - 40, sM.getWidth(), 30);
 }
 
-// ==============================================================================
-// ОБНОВЛЕНИЕ UI (TIMER)
-// ==============================================================================
-void TriadaFireAudioProcessorEditor::timerCallback()
-{
-    // Здесь будет код для обновления визуализаторов в реальном времени (осциллограф, метры и т.д.)
-}
+void TriadaFireAudioProcessorEditor::timerCallback() { masterEmergencyButton.repaint(); }
