@@ -115,7 +115,7 @@ public:
 private:
   double fs = 44100.0;
   std::mt19937 rng;
-  std::uniform_real_distribution<float> dist{0.0f, 1.0f};
+  std::uniform_real_distribution<float> dist{0.0f, 1.0f}; // ВОТ ТУТ Я ЕЕ ПРОПУСТИЛ, ДОБАВЬ!
 
   // Состояния фазового накопителя и компрессора
   float scratchPhase[2] = {0.0f, 0.0f};
